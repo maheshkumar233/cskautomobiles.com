@@ -3,18 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Register - Membership Portal</title>
+    <title>Register - CSK Automobiles</title>
     <link rel="stylesheet" href="styles.css">
     <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 </head>
 <body>
-    <!-- Toast Notification Container -->
     <div id="toastContainer" style="position: fixed; top: 20px; right: 20px; z-index: 10000;"></div>
 
     <div class="container">
         <div class="login-card">
             <h1>Create Account</h1>
-            <p class="subtitle">Join our membership program</p>
+            <p class="subtitle">Join CSK Automobiles membership program</p>
 
             <form id="registerForm">
                 <div class="form-group">
@@ -54,7 +53,6 @@
             </div>
         </div>
 
-        <!-- OTP Verification Modal -->
         <div id="otpModal" class="modal">
             <div class="modal-content">
                 <h2>Verify Your Email</h2>
@@ -88,32 +86,30 @@
             animation: slideIn 0.3s ease;
             border-left: 4px solid #2563eb;
         }
-        
         .toast.success { border-left-color: #10b981; }
         .toast.error { border-left-color: #ef4444; }
         .toast-icon { font-size: 20px; flex-shrink: 0; }
         .toast.success .toast-icon { color: #10b981; }
         .toast.error .toast-icon { color: #ef4444; }
         .toast-message { flex: 1; color: #374151; font-size: 14px; font-weight: 500; }
-        
         @keyframes slideIn {
             from { transform: translateX(400px); opacity: 0; }
             to { transform: translateX(0); opacity: 1; }
         }
-        
         @keyframes slideOut {
             from { transform: translateX(0); opacity: 1; }
             to { transform: translateX(400px); opacity: 0; }
         }
-        
         .toast.hiding { animation: slideOut 0.3s ease forwards; }
     </style>
 
     <script>
         const EMAILJS_CONFIG = {
-            PUBLIC_KEY: 'kG6B7Cff-xvHUOkh7',      // Get from EmailJS Dashboard > Account > General
-            SERVICE_ID: 'service_vdbaisk',               // Get from EmailJS Dashboard > Email Services
-            TEMPLATE_ID: 'template_gahxvgv'
+            PUBLIC_KEY: 'kG6B7Cff-xvHUOkh7',
+            SERVICE_ID: 'service_vdbaisk',
+            OTP_TEMPLATE_ID: 'template_gahxvgv',
+            WELCOME_TEMPLATE_ID: 'template_rxj7sbh'
+             // NEW: Separate template for welcome email
         };
         
         let otpTimerInterval = null;
@@ -164,7 +160,7 @@
         function generateUserId() {
             const timestamp = Date.now().toString(36).toUpperCase();
             const randomStr = Math.random().toString(36).substring(2, 7).toUpperCase();
-            return `USER-${timestamp}-${randomStr}`;
+            return `CSK-${timestamp}-${randomStr}`;
         }
         
         function generateOTP() {
@@ -291,10 +287,11 @@
                 user_name: userName,
                 user_email: email,
                 otp_code: otp,
-                validity: '10 minutes'
+                validity: '10 minutes',
+                company_name: 'CSK Automobiles'
             };
             
-            emailjs.send(EMAILJS_CONFIG.SERVICE_ID, EMAILJS_CONFIG.TEMPLATE_ID, templateParams)
+            emailjs.send(EMAILJS_CONFIG.SERVICE_ID, EMAILJS_CONFIG.OTP_TEMPLATE_ID, templateParams)
                 .then(function(response) {
                     console.log('OTP email sent successfully!', response.status);
                     showToast('✓ OTP sent to your email', 'success');
@@ -450,11 +447,46 @@
             
             if (otpTimerInterval) clearInterval(otpTimerInterval);
             
+            // Send Welcome Email
+            sendWelcomeEmail(newUser);
+            
             showToast(`Registration successful! User ID: ${newUser.userId}`, 'success');
             
             setTimeout(() => {
                 window.location.href = 'index.html';
             }, 2000);
+        }
+        
+        // NEW: Send Welcome Email
+        function sendWelcomeEmail(user) {
+            if (EMAILJS_CONFIG.PUBLIC_KEY === 'YOUR_EMAILJS_PUBLIC_KEY') {
+                console.log('Welcome email would be sent to:', user.email);
+                return;
+            }
+            
+            const templateParams = {
+                to_email: user.email,
+                to_name: user.name,
+                user_name: user.name,
+                user_id: user.userId,
+                user_email: user.email,
+                user_phone: user.phone,
+                company_name: 'CSK Automobiles',
+                youtube_link: 'http://www.youtube.com/@cskumartech',
+                support_email: 'support@cskautomobiles.com',
+                registration_date: new Date(user.registeredDate).toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
+                })
+            };
+            
+            emailjs.send(EMAILJS_CONFIG.SERVICE_ID, EMAILJS_CONFIG.WELCOME_TEMPLATE_ID, templateParams)
+                .then(function(response) {
+                    console.log('Welcome email sent successfully!', response.status);
+                }, function(error) {
+                    console.error('Failed to send welcome email:', error);
+                });
         }
         
         function handleResendOTP(e) {
