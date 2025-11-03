@@ -486,9 +486,67 @@
                 <button type="submit" class="btn-primary">Login</button>
             </form>
 
+            <div style="text-align: center; margin-top: 15px;">
+                <a href="#" id="forgotPasswordLink" style="color: #2563eb; text-decoration: none; font-size: 14px; font-weight: 500;">Forgot Password?</a>
+            </div>
+
             <div class="register-link">
                 <p>New customer? <a href="register.html">Register here</a></p>
             </div>
+        </div>
+    </div>
+
+    <!-- Forgot Password Modal -->
+    <div id="forgotPasswordModal" class="modal">
+        <div class="modal-content">
+            <h2>Reset Password</h2>
+            <p style="color: #6b7280; margin-bottom: 20px; font-size: 14px;">Enter your registered email to receive a password reset code</p>
+            
+            <form id="forgotPasswordForm">
+                <div class="form-group">
+                    <label for="resetEmail">Email Address</label>
+                    <input type="email" id="resetEmail" required placeholder="Enter your registered email">
+                </div>
+                <button type="submit" class="btn-primary">Send Reset Code</button>
+            </form>
+            
+            <div style="text-align: center; margin-top: 15px;">
+                <a href="#" onclick="closeForgotPasswordModal()" style="color: #2563eb; text-decoration: none; font-size: 14px;">Back to Login</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Reset Password Modal with OTP -->
+    <div id="resetPasswordModal" class="modal">
+        <div class="modal-content">
+            <h2>Enter Reset Code</h2>
+            <p>Enter the 6-digit code sent to <span id="resetEmailDisplay" style="color: #2563eb; font-weight: 600;"></span></p>
+            
+            <div class="otp-inputs">
+                <input type="text" class="reset-otp-input" maxlength="1" inputmode="numeric" />
+                <input type="text" class="reset-otp-input" maxlength="1" inputmode="numeric" />
+                <input type="text" class="reset-otp-input" maxlength="1" inputmode="numeric" />
+                <input type="text" class="reset-otp-input" maxlength="1" inputmode="numeric" />
+                <input type="text" class="reset-otp-input" maxlength="1" inputmode="numeric" />
+                <input type="text" class="reset-otp-input" maxlength="1" inputmode="numeric" />
+            </div>
+            
+            <form id="newPasswordForm" style="margin-top: 20px;">
+                <div class="form-group">
+                    <label for="newPassword">New Password</label>
+                    <input type="password" id="newPassword" required placeholder="Enter new password" minlength="6">
+                </div>
+                <div class="form-group">
+                    <label for="confirmNewPassword">Confirm Password</label>
+                    <input type="password" id="confirmNewPassword" required placeholder="Confirm new password">
+                </div>
+                <button type="submit" class="btn-primary">Reset Password</button>
+            </form>
+            
+            <p class="resend-otp" style="text-align: center; margin-top: 15px;">
+                Didn't receive code? <a href="#" id="resendResetOtp">Resend Code</a>
+            </p>
+            <div id="resetOtpTimer" style="text-align: center; color: #6b7280; margin-top: 10px; font-size: 14px;"></div>
         </div>
     </div>
 
@@ -521,6 +579,7 @@
         let selectedLoginType = 'customer';
         let currentLoginUser = null;
         let otpTimerInterval = null;
+        let resetOtpTimerInterval = null;
         
         function showToast(message, type = 'success') {
             const container = document.getElementById('toastContainer');
@@ -541,6 +600,27 @@
         
         function closeLoginModal() {
             document.getElementById('loginModal').classList.remove('show');
+        }
+        
+        function showForgotPasswordModal() {
+            document.getElementById('forgotPasswordModal').classList.add('show');
+        }
+        
+        function closeForgotPasswordModal() {
+            document.getElementById('forgotPasswordModal').classList.remove('show');
+            document.getElementById('forgotPasswordForm').reset();
+        }
+        
+        function showResetPasswordModal() {
+            document.getElementById('resetPasswordModal').classList.add('show');
+            setupResetOTPInputs();
+            startResetOTPTimer();
+        }
+        
+        function closeResetPasswordModal() {
+            document.getElementById('resetPasswordModal').classList.remove('show');
+            document.getElementById('newPasswordForm').reset();
+            if (resetOtpTimerInterval) clearInterval(resetOtpTimerInterval);
         }
         
         document.addEventListener('DOMContentLoaded', function() {
@@ -598,6 +678,10 @@
         function setupLoginPage() {
             const loginTypeButtons = document.querySelectorAll('.btn-type');
             const loginForm = document.getElementById('loginForm');
+            const forgotPasswordLink = document.getElementById('forgotPasswordLink');
+            const forgotPasswordForm = document.getElementById('forgotPasswordForm');
+            const newPasswordForm = document.getElementById('newPasswordForm');
+            const resendResetOtp = document.getElementById('resendResetOtp');
             
             loginTypeButtons.forEach(btn => {
                 btn.addEventListener('click', function(e) {
@@ -608,120 +692,268 @@
                 });
             });
             
-            loginForm.addEventListener('submit', function(e) {
-                e.preventDefault();
-                
-                const email = document.getElementById('email').value.trim().toLowerCase();
-                const password = document.getElementById('password').value;
-                
-                const users = JSON.parse(localStorage.getItem('users')) || [];
-                const user = users.find(u => u.email === email && u.password === password);
-                
-                if (!user) {
-                    showToast('Invalid email or password', 'error');
-                    return;
-                }
-                
-                if (selectedLoginType === 'admin' && user.userType !== 'admin') {
-                    showToast('Access denied. Admin credentials required.', 'error');
-                    return;
-                }
-                
-                if (selectedLoginType === 'customer' && user.userType === 'admin') {
-                    showToast('Please use Admin login', 'error');
-                    return;
-                }
-                
-                if (!user.verified) {
-                    showToast('Please verify your email first', 'error');
-                    return;
-                }
-                
-                currentLoginUser = user;
-                
-                const otp = generateOTP();
-                sessionStorage.setItem('loginOTP', otp);
-                sessionStorage.setItem('pendingUser', user.userId);
-                
-                const otpExpiryTime = Date.now() + (10 * 60 * 1000);
-                sessionStorage.setItem('otpExpiry', otpExpiryTime);
-                
-                console.log('OTP Generated:', otp);
-                
-                document.getElementById('emailDisplay').textContent = email;
-                closeLoginModal();
-                sendOTPEmail(email, otp, user.name);
+            loginForm.addEventListener('submit', handleLogin);
+            forgotPasswordLink.addEventListener('click', handleForgotPasswordClick);
+            forgotPasswordForm.addEventListener('submit', handleForgotPasswordSubmit);
+            newPasswordForm.addEventListener('submit', handlePasswordReset);
+            resendResetOtp.addEventListener('click', handleResendResetOtp);
+            
+            document.getElementById('verifyOtpBtn').addEventListener('click', handleOTPVerification);
+            document.getElementById('resendOtp').addEventListener('click', handleResendOTP);
+        }
+        
+        function handleForgotPasswordClick(e) {
+            e.preventDefault();
+            closeLoginModal();
+            showForgotPasswordModal();
+        }
+        
+        function handleForgotPasswordSubmit(e) {
+            e.preventDefault();
+            
+            const email = document.getElementById('resetEmail').value.trim().toLowerCase();
+            const users = JSON.parse(localStorage.getItem('users')) || [];
+            const user = users.find(u => u.email === email && u.userType === 'customer');
+            
+            if (!user) {
+                showToast('Email not found or invalid user type', 'error');
+                return;
+            }
+            
+            const resetCode = generateOTP();
+            sessionStorage.setItem('resetOTP', resetCode);
+            sessionStorage.setItem('resetEmail', email);
+            sessionStorage.setItem('resetUserId', user.userId);
+            
+            const resetExpiry = Date.now() + (10 * 60 * 1000);
+            sessionStorage.setItem('resetExpiry', resetExpiry);
+            
+            console.log('Reset Code:', resetCode);
+            
+            const templateParams = {
+                to_email: email,
+                to_name: user.name,
+                user_name: user.name,
+                user_email: email,
+                otp_code: resetCode,
+                validity: '10 minutes',
+                company_name: 'CSK Automobiles'
+            };
+            
+            emailjs.send(EMAILJS_CONFIG.SERVICE_ID, EMAILJS_CONFIG.TEMPLATE_ID, templateParams)
+                .then(function(response) {
+                    console.log('Reset code sent!', response.status);
+                    showToast('✓ Reset code sent to your email', 'success');
+                    document.getElementById('resetEmailDisplay').textContent = email;
+                    closeForgotPasswordModal();
+                    showResetPasswordModal();
+                })
+                .catch(function(error) {
+                    console.error('Email error:', error);
+                    showToast('✓ Reset code sent (Check console)', 'success');
+                    console.log('Demo Reset Code:', resetCode);
+                    document.getElementById('resetEmailDisplay').textContent = email;
+                    closeForgotPasswordModal();
+                    showResetPasswordModal();
+                });
+        }
+        
+        function setupResetOTPInputs() {
+            const inputs = document.querySelectorAll('.reset-otp-input');
+            inputs.forEach(input => input.value = '');
+            inputs.forEach((input, index) => {
+                input.replaceWith(input.cloneNode(true));
             });
             
-            document.getElementById('verifyOtpBtn').addEventListener('click', function() {
-                const inputs = document.querySelectorAll('.otp-input');
-                const enteredOTP = Array.from(inputs).map(input => input.value).join('');
-                const correctOTP = sessionStorage.getItem('loginOTP');
-                const expiry = parseInt(sessionStorage.getItem('otpExpiry'));
+            const newInputs = document.querySelectorAll('.reset-otp-input');
+            newInputs.forEach((input, index) => {
+                input.addEventListener('input', function(e) {
+                    const value = this.value;
+                    if (!/^\d*$/.test(value)) {
+                        this.value = '';
+                        return;
+                    }
+                    if (value.length === 1 && index < newInputs.length - 1) {
+                        newInputs[index + 1].focus();
+                    }
+                });
                 
-                if (enteredOTP.length !== 6) {
-                    showToast('Please enter complete 6-digit OTP', 'error');
-                    return;
-                }
+                input.addEventListener('keydown', function(e) {
+                    if (e.key === 'Backspace' && !this.value && index > 0) {
+                        newInputs[index - 1].focus();
+                    }
+                });
+            });
+        }
+        
+        function startResetOTPTimer() {
+            if (resetOtpTimerInterval) clearInterval(resetOtpTimerInterval);
+            
+            const timerDisplay = document.getElementById('resetOtpTimer');
+            resetOtpTimerInterval = setInterval(() => {
+                const expiry = parseInt(sessionStorage.getItem('resetExpiry'));
+                const remaining = expiry - Date.now();
                 
-                if (Date.now() > expiry) {
-                    showToast('OTP has expired. Please login again.', 'error');
-                    sessionStorage.removeItem('loginOTP');
-                    setTimeout(() => window.location.reload(), 2000);
-                    return;
-                }
-                
-                if (enteredOTP === correctOTP) {
-                    const userId = sessionStorage.getItem('pendingUser');
-                    sessionStorage.setItem('currentUser', userId);
-                    sessionStorage.removeItem('loginOTP');
-                    sessionStorage.removeItem('pendingUser');
-                    sessionStorage.removeItem('otpExpiry');
-                    
-                    if (otpTimerInterval) clearInterval(otpTimerInterval);
-                    
-                    const users = JSON.parse(localStorage.getItem('users'));
-                    const user = users.find(u => u.userId === userId);
-                    
-                    showToast('Login successful!', 'success');
-                    
-                    setTimeout(() => {
-                        if (user.userType === 'admin') {
-                            window.location.href = 'admin-dashboard.html';
-                        } else {
-                            window.location.href = 'customer-dashboard.html';
-                        }
-                    }, 1000);
+                if (remaining <= 0) {
+                    clearInterval(resetOtpTimerInterval);
+                    timerDisplay.innerHTML = '<span style="color: #ef4444;">Reset code expired. Please try again.</span>';
+                    sessionStorage.removeItem('resetOTP');
                 } else {
-                    showToast('Invalid OTP. Please try again.', 'error');
-                    inputs.forEach(input => input.value = '');
-                    inputs[0].focus();
+                    const minutes = Math.floor(remaining / 60000);
+                    const seconds = Math.floor((remaining % 60000) / 1000);
+                    timerDisplay.innerHTML = `Code expires in: <strong>${minutes}:${seconds.toString().padStart(2, '0')}</strong>`;
                 }
-            });
+            }, 1000);
+        }
+        
+        function handlePasswordReset(e) {
+            e.preventDefault();
             
-            document.getElementById('resendOtp').addEventListener('click', function(e) {
-                e.preventDefault();
+            const inputs = document.querySelectorAll('.reset-otp-input');
+            const enteredCode = Array.from(inputs).map(input => input.value).join('');
+            const correctCode = sessionStorage.getItem('resetOTP');
+            const newPassword = document.getElementById('newPassword').value;
+            const confirmPassword = document.getElementById('confirmNewPassword').value;
+            const expiry = parseInt(sessionStorage.getItem('resetExpiry'));
+            
+            if (enteredCode.length !== 6) {
+                showToast('Please enter complete reset code', 'error');
+                return;
+            }
+            
+            if (Date.now() > expiry) {
+                showToast('Reset code has expired', 'error');
+                closeResetPasswordModal();
+                return;
+            }
+            
+            if (enteredCode !== correctCode) {
+                showToast('Invalid reset code', 'error');
+                inputs.forEach(input => input.value = '');
+                inputs[0].focus();
+                return;
+            }
+            
+            if (newPassword !== confirmPassword) {
+                showToast('Passwords do not match', 'error');
+                return;
+            }
+            
+            if (newPassword.length < 6) {
+                showToast('Password must be at least 6 characters', 'error');
+                return;
+            }
+            
+            // Update password
+            const users = JSON.parse(localStorage.getItem('users'));
+            const userId = sessionStorage.getItem('resetUserId');
+            const userIndex = users.findIndex(u => u.userId === userId);
+            
+            if (userIndex !== -1) {
+                users[userIndex].password = newPassword;
+                localStorage.setItem('users', JSON.stringify(users));
                 
-                if (!currentLoginUser) {
-                    showToast('Please login again', 'error');
-                    setTimeout(() => window.location.reload(), 2000);
-                    return;
-                }
+                sessionStorage.removeItem('resetOTP');
+                sessionStorage.removeItem('resetEmail');
+                sessionStorage.removeItem('resetUserId');
+                sessionStorage.removeItem('resetExpiry');
                 
-                const otp = generateOTP();
-                sessionStorage.setItem('loginOTP', otp);
-                
-                const otpExpiryTime = Date.now() + (10 * 60 * 1000);
-                sessionStorage.setItem('otpExpiry', otpExpiryTime);
-                
-                console.log('New OTP:', otp);
-                
-                document.querySelectorAll('.otp-input').forEach(input => input.value = '');
-                document.querySelector('.otp-input').focus();
-                
-                startOTPTimer();
-                sendOTPEmail(currentLoginUser.email, otp, currentLoginUser.name);
-            });
+                showToast('✓ Password reset successful! Please login with your new password.', 'success');
+                closeResetPasswordModal();
+                showLoginModal();
+            }
+        }
+        
+        function handleResendResetOtp(e) {
+            e.preventDefault();
+            
+            const email = sessionStorage.getItem('resetEmail');
+            if (!email) {
+                showToast('Session expired. Please try again.', 'error');
+                return;
+            }
+            
+            const users = JSON.parse(localStorage.getItem('users'));
+            const user = users.find(u => u.email === email);
+            
+            if (!user) {
+                showToast('User not found', 'error');
+                return;
+            }
+            
+            const resetCode = generateOTP();
+            sessionStorage.setItem('resetOTP', resetCode);
+            const resetExpiry = Date.now() + (10 * 60 * 1000);
+            sessionStorage.setItem('resetExpiry', resetExpiry);
+            
+            console.log('New Reset Code:', resetCode);
+            
+            const templateParams = {
+                to_email: email,
+                to_name: user.name,
+                user_name: user.name,
+                user_email: email,
+                otp_code: resetCode,
+                validity: '10 minutes',
+                company_name: 'CSK Automobiles'
+            };
+            
+            emailjs.send(EMAILJS_CONFIG.SERVICE_ID, EMAILJS_CONFIG.TEMPLATE_ID, templateParams)
+                .then(() => {
+                    showToast('✓ New reset code sent', 'success');
+                    document.querySelectorAll('.reset-otp-input').forEach(input => input.value = '');
+                    document.querySelector('.reset-otp-input').focus();
+                    startResetOTPTimer();
+                })
+                .catch(() => {
+                    showToast('✓ New reset code sent (Check console)', 'success');
+                    console.log('Demo Reset Code:', resetCode);
+                });
+        }
+        
+        function handleLogin(e) {
+            e.preventDefault();
+            
+            const email = document.getElementById('email').value.trim().toLowerCase();
+            const password = document.getElementById('password').value;
+            
+            const users = JSON.parse(localStorage.getItem('users')) || [];
+            const user = users.find(u => u.email === email && u.password === password);
+            
+            if (!user) {
+                showToast('Invalid email or password', 'error');
+                return;
+            }
+            
+            if (selectedLoginType === 'admin' && user.userType !== 'admin') {
+                showToast('Access denied. Admin credentials required.', 'error');
+                return;
+            }
+            
+            if (selectedLoginType === 'customer' && user.userType === 'admin') {
+                showToast('Please use Admin login', 'error');
+                return;
+            }
+            
+            if (!user.verified) {
+                showToast('Please verify your email first', 'error');
+                return;
+            }
+            
+            currentLoginUser = user;
+            
+            const otp = generateOTP();
+            sessionStorage.setItem('loginOTP', otp);
+            sessionStorage.setItem('pendingUser', user.userId);
+            
+            const otpExpiryTime = Date.now() + (10 * 60 * 1000);
+            sessionStorage.setItem('otpExpiry', otpExpiryTime);
+            
+            console.log('OTP Generated:', otp);
+            
+            document.getElementById('emailDisplay').textContent = email;
+            closeLoginModal();
+            sendOTPEmail(email, otp, user.name);
         }
         
         function generateOTP() {
@@ -821,10 +1053,86 @@
                 }
             }, 1000);
         }
+        
+        function handleOTPVerification() {
+            const inputs = document.querySelectorAll('.otp-input');
+            const enteredOTP = Array.from(inputs).map(input => input.value).join('');
+            const correctOTP = sessionStorage.getItem('loginOTP');
+            const expiry = parseInt(sessionStorage.getItem('otpExpiry'));
+            
+            if (enteredOTP.length !== 6) {
+                showToast('Please enter complete 6-digit OTP', 'error');
+                return;
+            }
+            
+            if (Date.now() > expiry) {
+                showToast('OTP has expired. Please login again.', 'error');
+                sessionStorage.removeItem('loginOTP');
+                setTimeout(() => window.location.reload(), 2000);
+                return;
+            }
+            
+            if (enteredOTP === correctOTP) {
+                const userId = sessionStorage.getItem('pendingUser');
+                sessionStorage.setItem('currentUser', userId);
+                sessionStorage.removeItem('loginOTP');
+                sessionStorage.removeItem('pendingUser');
+                sessionStorage.removeItem('otpExpiry');
+                
+                if (otpTimerInterval) clearInterval(otpTimerInterval);
+                
+                const users = JSON.parse(localStorage.getItem('users'));
+                const user = users.find(u => u.userId === userId);
+                
+                showToast('Login successful!', 'success');
+                
+                setTimeout(() => {
+                    if (user.userType === 'admin') {
+                        window.location.href = 'admin-dashboard.html';
+                    } else {
+                        window.location.href = 'customer-dashboard.html';
+                    }
+                }, 1000);
+            } else {
+                showToast('Invalid OTP. Please try again.', 'error');
+                inputs.forEach(input => input.value = '');
+                inputs[0].focus();
+            }
+        }
+        
+        function handleResendOTP(e) {
+            e.preventDefault();
+            
+            if (!currentLoginUser) {
+                showToast('Please login again', 'error');
+                setTimeout(() => window.location.reload(), 2000);
+                return;
+            }
+            
+            const otp = generateOTP();
+            sessionStorage.setItem('loginOTP', otp);
+            
+            const otpExpiryTime = Date.now() + (10 * 60 * 1000);
+            sessionStorage.setItem('otpExpiry', otpExpiryTime);
+            
+            console.log('New OTP:', otp);
+            
+            document.querySelectorAll('.otp-input').forEach(input => input.value = '');
+            document.querySelector('.otp-input').focus();
+            
+            startOTPTimer();
+            sendOTPEmail(currentLoginUser.email, otp, currentLoginUser.name);
+        }
 
         window.addEventListener('click', function(e) {
             if (e.target === document.getElementById('loginModal')) {
                 closeLoginModal();
+            }
+            if (e.target === document.getElementById('forgotPasswordModal')) {
+                closeForgotPasswordModal();
+            }
+            if (e.target === document.getElementById('resetPasswordModal')) {
+                closeResetPasswordModal();
             }
         });
     </script>
