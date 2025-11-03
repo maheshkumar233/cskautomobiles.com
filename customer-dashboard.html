@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Customer Dashboard</title>
+    <link rel="stylesheet" href="styles.css">
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+</head>
+<body>
+    <!-- Toast Notification Container -->
+    <div id="toastContainer" style="position: fixed; top: 20px; right: 20px; z-index: 10000;"></div>
+
+    <nav class="navbar">
+        <div class="nav-container">
+            <h2>Customer Portal</h2>
+            <div class="nav-right">
+                <span id="customerName">Welcome, User</span>
+                <button class="btn-logout" id="logoutBtn">Logout</button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="dashboard-container">
+        <aside class="sidebar">
+            <ul class="menu">
+                <li><a href="#" class="menu-item active" data-section="overview">Overview</a></li>
+                <li><a href="#" class="menu-item" data-section="membership">Membership</a></li>
+                <li><a href="#" class="menu-item" data-section="points">Points & Rewards</a></li>
+                <li><a href="#" class="menu-item" data-section="services">Service History</a></li>
+                <li><a href="#" class="menu-item" data-section="appointment">Book Appointment</a></li>
+                <li><a href="#" class="menu-item" data-section="service-request">Service Request</a></li>
+            </ul>
+        </aside>
+
+        <main class="main-content">
+            <!-- Overview Section -->
+            <section id="overview" class="content-section active">
+                <h2>Overview</h2>
+                <div class="info-card">
+                    <div class="info-item">
+                        <span class="label">User ID:</span>
+                        <span class="value" id="userId"></span>
+                    </div>
+                    <div class="info-item">
+                        <span class="label">Email:</span>
+                        <span class="value" id="userEmail"></span>
+                    </div>
+                    <div class="info-item">
+                        <span class="label">Member Since:</span>
+                        <span class="value" id="memberSince"></span>
+                    </div>
+                </div>
+
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <h3>Total Points</h3>
+                        <p class="stat-value" id="totalPoints">0</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Services Used</h3>
+                        <p class="stat-value" id="servicesCount">0</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Membership Status</h3>
+                        <p class="stat-value" id="membershipStatus">Inactive</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Membership Section -->
+            <section id="membership" class="content-section">
+                <h2>Membership Details</h2>
+                <div class="membership-card" id="membershipCard">
+                    <p class="no-membership">You don't have an active membership yet.</p>
+                </div>
+            </section>
+
+            <!-- Points Section -->
+            <section id="points" class="content-section">
+                <h2>Points & Rewards</h2>
+                <div id="pointsContent">
+                    <p class="no-data">Membership required to view points.</p>
+                </div>
+            </section>
+
+            <!-- Service History Section -->
+            <section id="services" class="content-section">
+                <h2>Service History</h2>
+                <div class="table-container">
+                    <table id="serviceTable">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Service</th>
+                                <th>Points Earned</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="serviceTableBody">
+                            <tr>
+                                <td colspan="4" class="no-data">No service history available</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Appointment Section -->
+            <section id="appointment" class="content-section">
+                <h2>Book Appointment</h2>
+                <form id="appointmentForm" class="appointment-form">
+                    <div class="form-group">
+                        <label for="appointmentDate">Appointment Date</label>
+                        <input type="date" id="appointmentDate" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="appointmentTime">Appointment Time</label>
+                        <input type="time" id="appointmentTime" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="serviceType">Service Type</label>
+                        <select id="serviceType" required>
+                            <option value="">Select Service</option>
+                            <option value="consultation">Consultation</option>
+                            <option value="maintenance">Maintenance</option>
+                            <option value="repair">Repair</option>
+                            <option value="installation">Installation</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="appointmentNotes">Additional Notes</label>
+                        <textarea id="appointmentNotes" rows="4"></textarea>
+                    </div>
+                    <button type="submit" class="btn-primary">Book Appointment</button>
+                </form>
+            </section>
+
+            <!-- Service Request Section -->
+            <section id="service-request" class="content-section">
+                <h2>Service Request</h2>
+                <form id="serviceRequestForm" class="appointment-form">
+                    <div class="form-group">
+                        <label for="requestTitle">Request Title</label>
+                        <input type="text" id="requestTitle" required placeholder="Brief description">
+                    </div>
+                    <div class="form-group">
+                        <label for="requestCategory">Category</label>
+                        <select id="requestCategory" required>
+                            <option value="">Select Category</option>
+                            <option value="technical">Technical Support</option>
+                            <option value="billing">Billing</option>
+                            <option value="general">General Inquiry</option>
+                            <option value="complaint">Complaint</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="requestDetails">Request Details</label>
+                        <textarea id="requestDetails" rows="6" required></textarea>
+                    </div>
+                    <button type="submit" class="btn-primary">Submit Request</button>
+                </form>
+
+                <h3 style="margin-top: 40px;">My Service Requests</h3>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Title</th>
+                                <th>Category</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="serviceRequestsBody">
+                            <tr>
+                                <td colspan="4" class="no-data">No service requests yet</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <style>
+        .toast {
+            background: white;
+            padding: 16px 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            min-width: 300px;
+            animation: slideIn 0.3s ease;
+            border-left: 4px solid #2563eb;
+        }
+        .toast.success { border-left-color: #10b981; }
+        .toast.error { border-left-color: #ef4444; }
+        .toast-icon { font-size: 20px; flex-shrink: 0; }
+        .toast.success .toast-icon { color: #10b981; }
+        .toast.error .toast-icon { color: #ef4444; }
+        .toast-message { flex: 1; color: #374151; font-size: 14px; font-weight: 500; }
+        @keyframes slideIn {
+            from { transform: translateX(400px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        @keyframes slideOut {
+            from { transform: translateX(0); opacity: 1; }
+            to { transform: translateX(400px); opacity: 0; }
+        }
+        .toast.hiding { animation: slideOut 0.3s ease forwards; }
+    </style>
+
+    <script>
+        // ThingSpeak Configuration
+        const THINGSPEAK_CONFIG = {
+            WRITE_API_KEY: '4D5D1B5BFZS7ZQP9',
+            CHANNEL_ID: '3144343'
+        };
+        
+        let currentUser = null;
+        
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            const icon = type === 'success' ? '✓' : '✕';
+            toast.innerHTML = `<span class="toast-icon">${icon}</span><span class="toast-message">${message}</span>`;
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.classList.add('hiding');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Customer dashboard loading...');
+            initializeCustomerDashboard();
+        });
+        
+        function initializeCustomerDashboard() {
+            const userId = sessionStorage.getItem('currentUser');
+            console.log('Current user ID:', userId);
+            
+            if (!userId) {
+                console.log('No user logged in, redirecting...');
+                window.location.href = 'index.html';
+                return;
+            }
+            
+            const users = JSON.parse(localStorage.getItem('users')) || [];
+            currentUser = users.find(u => u.userId === userId);
+            
+            console.log('Current user:', currentUser);
+            
+            if (!currentUser || currentUser.userType === 'admin') {
+                console.log('Invalid user or admin detected');
+                window.location.href = 'index.html';
+                return;
+            }
+            
+            setupCustomerDashboard();
+        }
+        
+        function setupCustomerDashboard() {
+            console.log('Setting up customer dashboard...');
+            
+            // Update user info
+            document.getElementById('customerName').textContent = `Welcome, ${currentUser.name}`;
+            document.getElementById('userId').textContent = currentUser.userId;
+            document.getElementById('userEmail').textContent = currentUser.email;
+            document.getElementById('memberSince').textContent = formatDate(currentUser.registeredDate);
+            
+            // Update stats
+            updateDashboardStats();
+            
+            // Setup sidebar navigation
+            const menuItems = document.querySelectorAll('.menu-item');
+            menuItems.forEach(item => {
+                item.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const section = this.dataset.section;
+                    
+                    console.log('Navigating to:', section);
+                    
+                    menuItems.forEach(i => i.classList.remove('active'));
+                    this.classList.add('active');
+                    
+                    document.querySelectorAll('.content-section').forEach(s => s.classList.remove('active'));
+                    
+                    const targetSection = document.getElementById(section);
+                    if (targetSection) {
+                        targetSection.classList.add('active');
+                        
+                        if (section === 'points') {
+                            loadPointsSection();
+                        } else if (section === 'services') {
+                            loadServiceHistory();
+                        } else if (section === 'membership') {
+                            loadMembershipSection();
+                        } else if (section === 'service-request') {
+                            loadServiceRequests();
+                        }
+                    }
+                });
+            });
+            
+            // Logout button
+            const logoutBtn = document.getElementById('logoutBtn');
+            if (logoutBtn) {
+                logoutBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    console.log('Logging out...');
+                    sessionStorage.removeItem('currentUser');
+                    showToast('Logged out successfully!', 'success');
+                    setTimeout(() => {
+                        window.location.href = 'index.html';
+                    }, 1000);
+                });
+            }
+            
+            // Appointment form
+            const appointmentForm = document.getElementById('appointmentForm');
+            if (appointmentForm) {
+                appointmentForm.addEventListener('submit', handleAppointmentSubmit);
+            }
+            
+            // Service request form
+            const serviceRequestForm = document.getElementById('serviceRequestForm');
+            if (serviceRequestForm) {
+                serviceRequestForm.addEventListener('submit', handleServiceRequest);
+            }
+            
+            // Initial loads
+            loadMembershipSection();
+            loadServiceHistory();
+            
+            console.log('Customer dashboard setup complete');
+        }
+        
+        function formatDate(date) {
+            return new Date(date).toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric'
+            });
+        }
+        
+        function getCurrentUser() {
+            const users = JSON.parse(localStorage.getItem('users')) || [];
+            return users.find(u => u.userId === currentUser.userId);
+        }
+        
+        function updateUser(updates) {
+            const users = JSON.parse(localStorage.getItem('users')) || [];
+            const index = users.findIndex(u => u.userId === currentUser.userId);
+            if (index !== -1) {
+                users[index] = { ...users[index], ...updates };
+                localStorage.setItem('users', JSON.stringify(users));
+                currentUser = users[index];
+            }
+        }
+        
+        function updateDashboardStats() {
+            const user = getCurrentUser();
+            document.getElementById('totalPoints').textContent = user.points || 0;
+            document.getElementById('servicesCount').textContent = user.serviceHistory ? user.serviceHistory.length : 0;
+            document.getElementById('membershipStatus').textContent = user.membership ? 'Active' : 'Inactive';
+        }
+        
+        function loadMembershipSection() {
+            const user = getCurrentUser();
+            const membershipCard = document.getElementById('membershipCard');
+            
+            if (!user.membership) {
+                membershipCard.innerHTML = '<p class="no-membership">You don\'t have an active membership yet.</p>';
+            } else {
+                membershipCard.innerHTML = `
+                    <h3 style="margin-bottom: 20px; color: white;">${user.membership.type.toUpperCase()} Membership</h3>
+                    <div class="membership-info">
+                        <div class="membership-detail">
+                            <div class="label">Start Date</div>
+                            <div class="value">${formatDate(user.membership.startDate)}</div>
+                        </div>
+                        <div class="membership-detail">
+                            <div class="label">Expiry Date</div>
+                            <div class="value">${formatDate(user.membership.expiryDate)}</div>
+                        </div>
+                        <div class="membership-detail">
+                            <div class="label">Status</div>
+                            <div class="value">${new Date(user.membership.expiryDate) > new Date() ? 'Active' : 'Expired'}</div>
+                        </div>
+                        <div class="membership-detail">
+                            <div class="label">Member ID</div>
+                            <div class="value">${user.userId}</div>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+        
+        function loadPointsSection() {
+            const user = getCurrentUser();
+            const pointsContent = document.getElementById('pointsContent');
+            
+            if (!user.membership) {
+                pointsContent.innerHTML = '<p class="no-data">Membership required to view points.</p>';
+            } else {
+                const expiryDate = new Date();
+                expiryDate.setMonth(expiryDate.getMonth() + 12);
+                
+                pointsContent.innerHTML = `
+                    <div class="points-grid">
+                        <div class="points-card">
+                            <h4>Total Points</h4>
+                            <div class="points-value">${user.points || 0}</div>
+                        </div>
+                        <div class="points-card">
+                            <h4>Points Value</h4>
+                            <div class="points-value">₹${(user.points || 0) * 0.5}</div>
+                            <p style="font-size: 12px; color: #6b7280; margin-top: 5px;">1 point = ₹0.50</p>
+                        </div>
+                        <div class="points-card">
+                            <h4>Points Expiry</h4>
+                            <div class="points-expiry">${formatDate(expiryDate)}</div>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+        
+        function loadServiceHistory() {
+            const user = getCurrentUser();
+            const tbody = document.getElementById('serviceTableBody');
+            
+            if (!user.serviceHistory || user.serviceHistory.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" class="no-data">No service history available</td></tr>';
+            } else {
+                tbody.innerHTML = user.serviceHistory.map(service => `
+                    <tr>
+                        <td>${formatDate(service.date)}</td>
+                        <td>${service.serviceName}</td>
+                        <td>${service.pointsEarned}</td>
+                        <td><span class="status-badge status-${service.status}">${service.status}</span></td>
+                    </tr>
+                `).join('');
+            }
+        }
+        
+        function handleAppointmentSubmit(e) {
+            e.preventDefault();
+            
+            const appointment = {
+                id: Date.now(),
+                userId: currentUser.userId,
+                userName: currentUser.name,
+                userEmail: currentUser.email,
+                date: document.getElementById('appointmentDate').value,
+                time: document.getElementById('appointmentTime').value,
+                serviceType: document.getElementById('serviceType').value,
+                notes: document.getElementById('appointmentNotes').value,
+                status: 'pending',
+                createdAt: new Date().toISOString()
+            };
+            
+            const appointments = JSON.parse(localStorage.getItem('appointments')) || [];
+            appointments.push(appointment);
+            localStorage.setItem('appointments', JSON.stringify(appointments));
+            
+            sendToThingSpeak(appointment);
+            
+            showToast('Appointment booked successfully!', 'success');
+            e.target.reset();
+        }
+        
+        function handleServiceRequest(e) {
+            e.preventDefault();
+            
+            const request = {
+                id: Date.now(),
+                userId: currentUser.userId,
+                userName: currentUser.name,
+                userEmail: currentUser.email,
+                title: document.getElementById('requestTitle').value,
+                category: document.getElementById('requestCategory').value,
+                details: document.getElementById('requestDetails').value,
+                status: 'pending',
+                createdAt: new Date().toISOString()
+            };
+            
+            const requests = JSON.parse(localStorage.getItem('serviceRequests')) || [];
+            requests.push(request);
+            localStorage.setItem('serviceRequests', JSON.stringify(requests));
+            
+            sendToThingSpeak(request);
+            
+            showToast('Service request submitted successfully!', 'success');
+            e.target.reset();
+            loadServiceRequests();
+        }
+        
+        function loadServiceRequests() {
+            const requests = JSON.parse(localStorage.getItem('serviceRequests')) || [];
+            const userRequests = requests.filter(r => r.userId === currentUser.userId);
+            const tbody = document.getElementById('serviceRequestsBody');
+            
+            if (userRequests.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" class="no-data">No service requests yet</td></tr>';
+            } else {
+                tbody.innerHTML = userRequests.map(request => `
+                    <tr>
+                        <td>${formatDate(request.createdAt)}</td>
+                        <td>${request.title}</td>
+                        <td>${request.category}</td>
+                        <td><span class="status-badge status-${request.status}">${request.status}</span></td>
+                    </tr>
+                `).join('');
+            }
+        }
+        
+        function sendToThingSpeak(data) {
+            if (THINGSPEAK_CONFIG.WRITE_API_KEY === 'YOUR_THINGSPEAK_WRITE_API_KEY') {
+                console.log('ThingSpeak not configured. Data:', data);
+                return;
+            }
+            
+            const url = 'https://api.thingspeak.com/update.json';
+            
+            const payload = {
+                api_key: THINGSPEAK_CONFIG.WRITE_API_KEY,
+                field1: data.userId,
+                field2: data.userName,
+                field3: data.userEmail,
+                field4: data.serviceType || data.category,
+                field5: data.date || formatDate(data.createdAt),
+                field6: data.time || '',
+                field7: data.status,
+                field8: data.notes || data.title
+            };
+            
+            fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                body: new URLSearchParams(payload)
+            })
+            .then(response => response.json())
+            .then(result => {
+                console.log('ThingSpeak response:', result);
+            })
+            .catch(error => {
+                console.error('ThingSpeak error:', error);
+            });
+        }
+    </script>
+</body>
+</html>

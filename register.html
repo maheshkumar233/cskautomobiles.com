@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register - Membership Portal</title>
+    <link rel="stylesheet" href="styles.css">
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+</head>
+<body>
+    <!-- Toast Notification Container -->
+    <div id="toastContainer" style="position: fixed; top: 20px; right: 20px; z-index: 10000;"></div>
+
+    <div class="container">
+        <div class="login-card">
+            <h1>Create Account</h1>
+            <p class="subtitle">Join our membership program</p>
+
+            <form id="registerForm">
+                <div class="form-group">
+                    <label for="fullName">Full Name</label>
+                    <input type="text" id="fullName" required placeholder="Enter your full name" minlength="3">
+                </div>
+
+                <div class="form-group">
+                    <label for="regEmail">Email Address</label>
+                    <input type="email" id="regEmail" required placeholder="Enter your email">
+                    <span id="emailError" style="color: red; font-size: 12px; display: none;">Invalid email format</span>
+                </div>
+
+                <div class="form-group">
+                    <label for="phone">Phone Number</label>
+                    <input type="tel" id="phone" required placeholder="Enter your phone number" pattern="[0-9]{10}" maxlength="10">
+                    <span style="color: #6b7280; font-size: 12px;">Enter 10-digit phone number</span>
+                </div>
+
+                <div class="form-group">
+                    <label for="regPassword">Password</label>
+                    <input type="password" id="regPassword" required placeholder="Create a password" minlength="6">
+                    <span style="color: #6b7280; font-size: 12px;">Minimum 6 characters</span>
+                </div>
+
+                <div class="form-group">
+                    <label for="confirmPassword">Confirm Password</label>
+                    <input type="password" id="confirmPassword" required placeholder="Confirm your password">
+                    <span id="passwordError" style="color: red; font-size: 12px; display: none;">Passwords do not match</span>
+                </div>
+
+                <button type="submit" class="btn-primary" id="registerBtn">Register</button>
+            </form>
+
+            <div class="register-link">
+                <p>Already have an account? <a href="index.html">Login here</a></p>
+            </div>
+        </div>
+
+        <!-- OTP Verification Modal -->
+        <div id="otpModal" class="modal">
+            <div class="modal-content">
+                <h2>Verify Your Email</h2>
+                <p>Enter the 6-digit code sent to <span id="emailDisplay" style="color: #2563eb; font-weight: 600;"></span></p>
+                <div class="otp-inputs">
+                    <input type="text" class="otp-input" maxlength="1" inputmode="numeric" />
+                    <input type="text" class="otp-input" maxlength="1" inputmode="numeric" />
+                    <input type="text" class="otp-input" maxlength="1" inputmode="numeric" />
+                    <input type="text" class="otp-input" maxlength="1" inputmode="numeric" />
+                    <input type="text" class="otp-input" maxlength="1" inputmode="numeric" />
+                    <input type="text" class="otp-input" maxlength="1" inputmode="numeric" />
+                </div>
+                <button class="btn-primary" id="verifyOtpBtn">Verify & Complete Registration</button>
+                <p class="resend-otp">Didn't receive code? <a href="#" id="resendOtp">Resend OTP</a></p>
+                <div id="otpTimer" style="text-align: center; color: #6b7280; margin-top: 10px; font-size: 14px;"></div>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        .toast {
+            background: white;
+            padding: 16px 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            min-width: 300px;
+            animation: slideIn 0.3s ease;
+            border-left: 4px solid #2563eb;
+        }
+        
+        .toast.success { border-left-color: #10b981; }
+        .toast.error { border-left-color: #ef4444; }
+        .toast-icon { font-size: 20px; flex-shrink: 0; }
+        .toast.success .toast-icon { color: #10b981; }
+        .toast.error .toast-icon { color: #ef4444; }
+        .toast-message { flex: 1; color: #374151; font-size: 14px; font-weight: 500; }
+        
+        @keyframes slideIn {
+            from { transform: translateX(400px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        
+        @keyframes slideOut {
+            from { transform: translateX(0); opacity: 1; }
+            to { transform: translateX(400px); opacity: 0; }
+        }
+        
+        .toast.hiding { animation: slideOut 0.3s ease forwards; }
+    </style>
+
+    <script>
+        const EMAILJS_CONFIG = {
+            PUBLIC_KEY: 'kG6B7Cff-xvHUOkh7',      // Get from EmailJS Dashboard > Account > General
+            SERVICE_ID: 'service_vdbaisk',               // Get from EmailJS Dashboard > Email Services
+            TEMPLATE_ID: 'template_gahxvgv'
+        };
+        
+        let otpTimerInterval = null;
+        let otpExpiryTime = null;
+        
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            const icon = type === 'success' ? '✓' : '✕';
+            toast.innerHTML = `<span class="toast-icon">${icon}</span><span class="toast-message">${message}</span>`;
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.classList.add('hiding');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeStorage();
+            initializeEmailJS();
+            setupRegistrationPage();
+        });
+        
+        function initializeEmailJS() {
+            if (EMAILJS_CONFIG.PUBLIC_KEY !== 'YOUR_EMAILJS_PUBLIC_KEY') {
+                try {
+                    emailjs.init({ publicKey: EMAILJS_CONFIG.PUBLIC_KEY });
+                    console.log('EmailJS initialized');
+                } catch (error) {
+                    console.error('EmailJS initialization error:', error);
+                }
+            }
+        }
+        
+        function initializeStorage() {
+            if (!localStorage.getItem('users')) {
+                localStorage.setItem('users', JSON.stringify([]));
+            }
+            if (!localStorage.getItem('serviceRequests')) {
+                localStorage.setItem('serviceRequests', JSON.stringify([]));
+            }
+            if (!localStorage.getItem('appointments')) {
+                localStorage.setItem('appointments', JSON.stringify([]));
+            }
+        }
+        
+        function generateUserId() {
+            const timestamp = Date.now().toString(36).toUpperCase();
+            const randomStr = Math.random().toString(36).substring(2, 7).toUpperCase();
+            return `USER-${timestamp}-${randomStr}`;
+        }
+        
+        function generateOTP() {
+            return Math.floor(100000 + Math.random() * 900000).toString();
+        }
+        
+        function validateEmail(email) {
+            const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+            return emailRegex.test(email);
+        }
+        
+        function validatePhone(phone) {
+            const phoneRegex = /^[0-9]{10}$/;
+            return phoneRegex.test(phone);
+        }
+        
+        function setupRegistrationPage() {
+            const registerForm = document.getElementById('registerForm');
+            const regEmail = document.getElementById('regEmail');
+            const confirmPassword = document.getElementById('confirmPassword');
+            const regPassword = document.getElementById('regPassword');
+            
+            regEmail.addEventListener('blur', function() {
+                const emailError = document.getElementById('emailError');
+                if (this.value && !validateEmail(this.value)) {
+                    emailError.style.display = 'block';
+                    this.style.borderColor = '#ef4444';
+                } else {
+                    emailError.style.display = 'none';
+                    this.style.borderColor = '';
+                }
+            });
+            
+            confirmPassword.addEventListener('input', function() {
+                const passwordError = document.getElementById('passwordError');
+                if (this.value && this.value !== regPassword.value) {
+                    passwordError.style.display = 'block';
+                    this.style.borderColor = '#ef4444';
+                } else {
+                    passwordError.style.display = 'none';
+                    this.style.borderColor = '';
+                }
+            });
+            
+            registerForm.addEventListener('submit', handleRegistration);
+            document.getElementById('verifyOtpBtn').addEventListener('click', handleOTPVerification);
+            document.getElementById('resendOtp').addEventListener('click', handleResendOTP);
+        }
+        
+        function handleRegistration(e) {
+            e.preventDefault();
+            
+            const fullName = document.getElementById('fullName').value.trim();
+            const email = document.getElementById('regEmail').value.trim().toLowerCase();
+            const phone = document.getElementById('phone').value.trim();
+            const password = document.getElementById('regPassword').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+            
+            if (fullName.length < 3) {
+                showToast('Name must be at least 3 characters long', 'error');
+                return;
+            }
+            
+            if (!validateEmail(email)) {
+                showToast('Please enter a valid email address', 'error');
+                document.getElementById('emailError').style.display = 'block';
+                return;
+            }
+            
+            if (!validatePhone(phone)) {
+                showToast('Please enter a valid 10-digit phone number', 'error');
+                return;
+            }
+            
+            if (password.length < 6) {
+                showToast('Password must be at least 6 characters long', 'error');
+                return;
+            }
+            
+            if (password !== confirmPassword) {
+                showToast('Passwords do not match', 'error');
+                document.getElementById('passwordError').style.display = 'block';
+                return;
+            }
+            
+            const users = JSON.parse(localStorage.getItem('users')) || [];
+            if (users.find(u => u.email === email)) {
+                showToast('Email already registered. Please login.', 'error');
+                return;
+            }
+            
+            const pendingData = {
+                name: fullName,
+                email: email,
+                phone: phone,
+                password: password
+            };
+            
+            sessionStorage.setItem('pendingRegistration', JSON.stringify(pendingData));
+            
+            const otp = generateOTP();
+            sessionStorage.setItem('registrationOTP', otp);
+            
+            otpExpiryTime = Date.now() + (10 * 60 * 1000);
+            sessionStorage.setItem('otpExpiry', otpExpiryTime);
+            
+            console.log('Generated OTP:', otp);
+            
+            sendOTPEmail(email, otp, fullName);
+        }
+        
+        function sendOTPEmail(email, otp, userName) {
+            if (EMAILJS_CONFIG.PUBLIC_KEY === 'YOUR_EMAILJS_PUBLIC_KEY') {
+                console.log('OTP:', otp);
+                showToast('✓ OTP sent successfully', 'success');
+                document.getElementById('emailDisplay').textContent = email;
+                showOTPModal();
+                return;
+            }
+            
+            const templateParams = {
+                to_email: email,
+                to_name: userName,
+                user_name: userName,
+                user_email: email,
+                otp_code: otp,
+                validity: '10 minutes'
+            };
+            
+            emailjs.send(EMAILJS_CONFIG.SERVICE_ID, EMAILJS_CONFIG.TEMPLATE_ID, templateParams)
+                .then(function(response) {
+                    console.log('OTP email sent successfully!', response.status);
+                    showToast('✓ OTP sent to your email', 'success');
+                    document.getElementById('emailDisplay').textContent = email;
+                    showOTPModal();
+                }, function(error) {
+                    console.error('Failed to send OTP email:', error);
+                    showToast('✓ OTP sent (Check console)', 'success');
+                    console.log('Demo OTP:', otp);
+                    document.getElementById('emailDisplay').textContent = email;
+                    showOTPModal();
+                });
+        }
+        
+        function showOTPModal() {
+            const modal = document.getElementById('otpModal');
+            modal.classList.add('show');
+            setupOTPInputs();
+            startOTPTimer();
+            const firstInput = document.querySelector('.otp-input');
+            if (firstInput) firstInput.focus();
+        }
+        
+        function setupOTPInputs() {
+            const inputs = document.querySelectorAll('.otp-input');
+            inputs.forEach(input => input.value = '');
+            inputs.forEach((input, index) => {
+                const newInput = input.cloneNode(true);
+                input.parentNode.replaceChild(newInput, input);
+            });
+            
+            const newInputs = document.querySelectorAll('.otp-input');
+            newInputs.forEach((input, index) => {
+                input.addEventListener('input', function(e) {
+                    const value = this.value;
+                    if (!/^\d*$/.test(value)) {
+                        this.value = '';
+                        return;
+                    }
+                    if (value.length === 1 && index < newInputs.length - 1) {
+                        newInputs[index + 1].focus();
+                    }
+                });
+                
+                input.addEventListener('keydown', function(e) {
+                    if (e.key === 'Backspace' && !this.value && index > 0) {
+                        newInputs[index - 1].focus();
+                    }
+                });
+                
+                input.addEventListener('paste', function(e) {
+                    e.preventDefault();
+                    const pastedData = e.clipboardData.getData('text');
+                    const digits = pastedData.replace(/\D/g, '').split('');
+                    digits.forEach((digit, i) => {
+                        if (index + i < newInputs.length) {
+                            newInputs[index + i].value = digit;
+                        }
+                    });
+                    const nextIndex = Math.min(index + digits.length, newInputs.length - 1);
+                    newInputs[nextIndex].focus();
+                });
+                
+                input.addEventListener('focus', function() {
+                    this.select();
+                });
+            });
+        }
+        
+        function startOTPTimer() {
+            if (otpTimerInterval) clearInterval(otpTimerInterval);
+            
+            const timerDisplay = document.getElementById('otpTimer');
+            otpTimerInterval = setInterval(() => {
+                const expiry = parseInt(sessionStorage.getItem('otpExpiry'));
+                const remaining = expiry - Date.now();
+                
+                if (remaining <= 0) {
+                    clearInterval(otpTimerInterval);
+                    timerDisplay.innerHTML = '<span style="color: #ef4444;">OTP expired. Please request a new one.</span>';
+                    sessionStorage.removeItem('registrationOTP');
+                } else {
+                    const minutes = Math.floor(remaining / 60000);
+                    const seconds = Math.floor((remaining % 60000) / 1000);
+                    timerDisplay.innerHTML = `OTP expires in: <strong>${minutes}:${seconds.toString().padStart(2, '0')}</strong>`;
+                }
+            }, 1000);
+        }
+        
+        function handleOTPVerification() {
+            const inputs = document.querySelectorAll('.otp-input');
+            const enteredOTP = Array.from(inputs).map(input => input.value).join('');
+            const correctOTP = sessionStorage.getItem('registrationOTP');
+            const expiry = parseInt(sessionStorage.getItem('otpExpiry'));
+            
+            if (enteredOTP.length !== 6) {
+                showToast('Please enter complete 6-digit OTP', 'error');
+                return;
+            }
+            
+            if (!correctOTP) {
+                showToast('OTP expired or not found. Please register again.', 'error');
+                setTimeout(() => window.location.reload(), 2000);
+                return;
+            }
+            
+            if (Date.now() > expiry) {
+                showToast('OTP has expired. Please request a new one.', 'error');
+                sessionStorage.removeItem('registrationOTP');
+                return;
+            }
+            
+            if (enteredOTP !== correctOTP) {
+                showToast('Invalid OTP. Please check and try again.', 'error');
+                inputs.forEach(input => input.value = '');
+                inputs[0].focus();
+                return;
+            }
+            
+            createUserAccount();
+        }
+        
+        function createUserAccount() {
+            const pendingReg = JSON.parse(sessionStorage.getItem('pendingRegistration'));
+            
+            if (!pendingReg) {
+                showToast('Registration data not found. Please try again.', 'error');
+                setTimeout(() => window.location.reload(), 2000);
+                return;
+            }
+            
+            const newUser = {
+                userId: generateUserId(),
+                name: pendingReg.name,
+                email: pendingReg.email,
+                phone: pendingReg.phone,
+                password: pendingReg.password,
+                userType: 'customer',
+                verified: true,
+                registeredDate: new Date().toISOString(),
+                membership: null,
+                points: 0,
+                serviceHistory: []
+            };
+            
+            const users = JSON.parse(localStorage.getItem('users')) || [];
+            users.push(newUser);
+            localStorage.setItem('users', JSON.stringify(users));
+            
+            sessionStorage.removeItem('registrationOTP');
+            sessionStorage.removeItem('pendingRegistration');
+            sessionStorage.removeItem('otpExpiry');
+            
+            if (otpTimerInterval) clearInterval(otpTimerInterval);
+            
+            showToast(`Registration successful! User ID: ${newUser.userId}`, 'success');
+            
+            setTimeout(() => {
+                window.location.href = 'index.html';
+            }, 2000);
+        }
+        
+        function handleResendOTP(e) {
+            e.preventDefault();
+            
+            const pendingReg = JSON.parse(sessionStorage.getItem('pendingRegistration'));
+            
+            if (!pendingReg) {
+                showToast('Registration data not found. Please start registration again.', 'error');
+                setTimeout(() => window.location.reload(), 2000);
+                return;
+            }
+            
+            const newOTP = generateOTP();
+            sessionStorage.setItem('registrationOTP', newOTP);
+            
+            otpExpiryTime = Date.now() + (10 * 60 * 1000);
+            sessionStorage.setItem('otpExpiry', otpExpiryTime);
+            
+            console.log('New OTP:', newOTP);
+            
+            document.querySelectorAll('.otp-input').forEach(input => input.value = '');
+            document.querySelector('.otp-input').focus();
+            
+            startOTPTimer();
+            sendOTPEmail(pendingReg.email, newOTP, pendingReg.name);
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Membership Portal</title>
+    <link rel="stylesheet" href="styles.css">
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+</head>
+<body>
+    <!-- Toast Notification Container -->
+    <div id="toastContainer" style="position: fixed; top: 20px; right: 20px; z-index: 10000;"></div>
+
+    <div class="container">
+        <div class="login-card">
+            <h1>Welcome Back</h1>
+            <p class="subtitle">Please select your login type</p>
+            
+            <div class="login-type-selector">
+                <button class="btn-type active" data-type="customer">Customer Login</button>
+                <button class="btn-type" data-type="admin">Admin Login</button>
+            </div>
+
+            <form id="loginForm">
+                <div class="form-group">
+                    <label for="email">Email Address</label>
+                    <input type="email" id="email" required placeholder="Enter your email">
+                </div>
+
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" required placeholder="Enter your password">
+                </div>
+
+                <button type="submit" class="btn-primary">Login</button>
+            </form>
+
+            <div class="register-link">
+                <p>New customer? <a href="register.html">Register here</a></p>
+            </div>
+        </div>
+
+        <!-- OTP Verification Modal -->
+        <div id="otpModal" class="modal">
+            <div class="modal-content">
+                <h2>Verify OTP</h2>
+                <p>Enter the 6-digit code sent to <span id="emailDisplay" style="color: #2563eb; font-weight: 600;"></span></p>
+                <div class="otp-inputs">
+                    <input type="text" class="otp-input" maxlength="1" inputmode="numeric" />
+                    <input type="text" class="otp-input" maxlength="1" inputmode="numeric" />
+                    <input type="text" class="otp-input" maxlength="1" inputmode="numeric" />
+                    <input type="text" class="otp-input" maxlength="1" inputmode="numeric" />
+                    <input type="text" class="otp-input" maxlength="1" inputmode="numeric" />
+                    <input type="text" class="otp-input" maxlength="1" inputmode="numeric" />
+                </div>
+                <button class="btn-primary" id="verifyOtpBtn">Verify OTP</button>
+                <p class="resend-otp">Didn't receive code? <a href="#" id="resendOtp">Resend OTP</a></p>
+                <div id="otpTimer" style="text-align: center; color: #6b7280; margin-top: 10px; font-size: 14px;"></div>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        .toast {
+            background: white;
+            padding: 16px 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            min-width: 300px;
+            animation: slideIn 0.3s ease;
+            border-left: 4px solid #2563eb;
+        }
+        
+        .toast.success {
+            border-left-color: #10b981;
+        }
+        
+        .toast.error {
+            border-left-color: #ef4444;
+        }
+        
+        .toast-icon {
+            font-size: 20px;
+            flex-shrink: 0;
+        }
+        
+        .toast.success .toast-icon {
+            color: #10b981;
+        }
+        
+        .toast.error .toast-icon {
+            color: #ef4444;
+        }
+        
+        .toast-message {
+            flex: 1;
+            color: #374151;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        
+        @keyframes slideIn {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        
+        @keyframes slideOut {
+            from {
+                transform: translateX(0);
+                opacity: 1;
+            }
+            to {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+        }
+        
+        .toast.hiding {
+            animation: slideOut 0.3s ease forwards;
+        }
+    </style>
+
+    <script>
+        // EmailJS Configuration - REPLACE WITH YOUR CREDENTIALS
+        const EMAILJS_CONFIG = {
+            PUBLIC_KEY: 'kG6B7Cff-xvHUOkh7',      // Get from EmailJS Dashboard > Account > General
+            SERVICE_ID: 'service_vdbaisk',               // Get from EmailJS Dashboard > Email Services
+            TEMPLATE_ID: 'template_gahxvgv'
+        };
+        
+        let selectedLoginType = 'customer';
+        let currentLoginUser = null;
+        let otpTimerInterval = null;
+        
+        // Toast Notification Function
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            
+            const icon = type === 'success' ? '✓' : '✕';
+            toast.innerHTML = `
+                <span class="toast-icon">${icon}</span>
+                <span class="toast-message">${message}</span>
+            `;
+            
+            container.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.classList.add('hiding');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeStorage();
+            initializeEmailJS();
+            setupLoginPage();
+        });
+        
+        function initializeEmailJS() {
+            if (EMAILJS_CONFIG.PUBLIC_KEY !== 'YOUR_EMAILJS_PUBLIC_KEY') {
+                try {
+                    emailjs.init({ publicKey: EMAILJS_CONFIG.PUBLIC_KEY });
+                    console.log('EmailJS initialized');
+                } catch (error) {
+                    console.error('EmailJS error:', error);
+                }
+            }
+        }
+        
+        function initializeStorage() {
+            let users = JSON.parse(localStorage.getItem('users')) || [];
+            
+            // Find and update or create admin
+            const adminIndex = users.findIndex(u => u.userType === 'admin');
+            
+            const adminData = {
+                userId: 'ADMIN-001',
+                name: 'Mahesh Admin',
+                email: 'mahesh2332005@gmail.com',
+                password: 'cskadmin123@7010099085',
+                phone: '7010099085',
+                userType: 'admin',
+                verified: true,
+                registeredDate: new Date().toISOString()
+            };
+            
+            if (adminIndex !== -1) {
+                users[adminIndex] = adminData;
+            } else {
+                users.push(adminData);
+            }
+            
+            localStorage.setItem('users', JSON.stringify(users));
+            
+            if (!localStorage.getItem('serviceRequests')) {
+                localStorage.setItem('serviceRequests', JSON.stringify([]));
+            }
+            if (!localStorage.getItem('appointments')) {
+                localStorage.setItem('appointments', JSON.stringify([]));
+            }
+            if (!localStorage.getItem('pointsHistory')) {
+                localStorage.setItem('pointsHistory', JSON.stringify([]));
+            }
+        }
+        
+        function setupLoginPage() {
+            const loginTypeButtons = document.querySelectorAll('.btn-type');
+            const loginForm = document.getElementById('loginForm');
+            
+            loginTypeButtons.forEach(btn => {
+                btn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    loginTypeButtons.forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    selectedLoginType = this.dataset.type;
+                    console.log('Login type:', selectedLoginType);
+                });
+            });
+            
+            loginForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                const email = document.getElementById('email').value.trim().toLowerCase();
+                const password = document.getElementById('password').value;
+                
+                console.log('Attempting login:', email);
+                
+                const users = JSON.parse(localStorage.getItem('users')) || [];
+                const user = users.find(u => u.email === email && u.password === password);
+                
+                if (!user) {
+                    showToast('Invalid email or password', 'error');
+                    return;
+                }
+                
+                if (selectedLoginType === 'admin' && user.userType !== 'admin') {
+                    showToast('Access denied. Admin credentials required.', 'error');
+                    return;
+                }
+                
+                if (selectedLoginType === 'customer' && user.userType === 'admin') {
+                    showToast('Please use Admin login', 'error');
+                    return;
+                }
+                
+                if (!user.verified) {
+                    showToast('Please verify your email first', 'error');
+                    return;
+                }
+                
+                currentLoginUser = user;
+                
+                const otp = generateOTP();
+                sessionStorage.setItem('loginOTP', otp);
+                sessionStorage.setItem('pendingUser', user.userId);
+                
+                const otpExpiryTime = Date.now() + (10 * 60 * 1000);
+                sessionStorage.setItem('otpExpiry', otpExpiryTime);
+                
+                console.log('OTP Generated:', otp);
+                
+                document.getElementById('emailDisplay').textContent = email;
+                sendOTPEmail(email, otp, user.name);
+            });
+            
+            document.getElementById('verifyOtpBtn').addEventListener('click', function() {
+                const inputs = document.querySelectorAll('.otp-input');
+                const enteredOTP = Array.from(inputs).map(input => input.value).join('');
+                const correctOTP = sessionStorage.getItem('loginOTP');
+                const expiry = parseInt(sessionStorage.getItem('otpExpiry'));
+                
+                if (enteredOTP.length !== 6) {
+                    showToast('Please enter complete 6-digit OTP', 'error');
+                    return;
+                }
+                
+                if (Date.now() > expiry) {
+                    showToast('OTP has expired. Please login again.', 'error');
+                    sessionStorage.removeItem('loginOTP');
+                    setTimeout(() => window.location.reload(), 2000);
+                    return;
+                }
+                
+                if (enteredOTP === correctOTP) {
+                    const userId = sessionStorage.getItem('pendingUser');
+                    sessionStorage.setItem('currentUser', userId);
+                    sessionStorage.removeItem('loginOTP');
+                    sessionStorage.removeItem('pendingUser');
+                    sessionStorage.removeItem('otpExpiry');
+                    
+                    if (otpTimerInterval) clearInterval(otpTimerInterval);
+                    
+                    const users = JSON.parse(localStorage.getItem('users'));
+                    const user = users.find(u => u.userId === userId);
+                    
+                    showToast('Login successful!', 'success');
+                    
+                    setTimeout(() => {
+                        if (user.userType === 'admin') {
+                            window.location.href = 'admin-dashboard.html';
+                        } else {
+                            window.location.href = 'customer-dashboard.html';
+                        }
+                    }, 1000);
+                } else {
+                    showToast('Invalid OTP. Please try again.', 'error');
+                    inputs.forEach(input => input.value = '');
+                    inputs[0].focus();
+                }
+            });
+            
+            document.getElementById('resendOtp').addEventListener('click', function(e) {
+                e.preventDefault();
+                
+                if (!currentLoginUser) {
+                    showToast('Please login again', 'error');
+                    setTimeout(() => window.location.reload(), 2000);
+                    return;
+                }
+                
+                const otp = generateOTP();
+                sessionStorage.setItem('loginOTP', otp);
+                
+                const otpExpiryTime = Date.now() + (10 * 60 * 1000);
+                sessionStorage.setItem('otpExpiry', otpExpiryTime);
+                
+                console.log('New OTP:', otp);
+                
+                document.querySelectorAll('.otp-input').forEach(input => input.value = '');
+                document.querySelector('.otp-input').focus();
+                
+                startOTPTimer();
+                sendOTPEmail(currentLoginUser.email, otp, currentLoginUser.name);
+            });
+        }
+        
+        function generateOTP() {
+            return Math.floor(100000 + Math.random() * 900000).toString();
+        }
+        
+        function sendOTPEmail(email, otp, userName) {
+            if (EMAILJS_CONFIG.PUBLIC_KEY === 'YOUR_EMAILJS_PUBLIC_KEY') {
+                console.log('OTP:', otp);
+                showToast('✓ OTP sent successfully', 'success');
+                showOTPModal();
+                return;
+            }
+            
+            const recipientEmail = email.trim().toLowerCase();
+            
+            const templateParams = {
+                to_email: recipientEmail,
+                to_name: userName,
+                user_name: userName,
+                user_email: recipientEmail,
+                otp_code: otp,
+                validity: '10 minutes'
+            };
+            
+            console.log('Sending OTP to:', recipientEmail);
+            
+            emailjs.send(EMAILJS_CONFIG.SERVICE_ID, EMAILJS_CONFIG.TEMPLATE_ID, templateParams)
+                .then(function(response) {
+                    console.log('OTP email sent!', response.status);
+                    showToast('✓ OTP sent to your email', 'success');
+                    showOTPModal();
+                })
+                .catch(function(error) {
+                    console.error('Email error:', error);
+                    showToast('✓ OTP sent (Check console)', 'success');
+                    console.log('Demo OTP:', otp);
+                    showOTPModal();
+                });
+        }
+        
+        function showOTPModal() {
+            const modal = document.getElementById('otpModal');
+            modal.classList.add('show');
+            setupOTPInputs();
+            startOTPTimer();
+            document.querySelector('.otp-input').focus();
+        }
+        
+        function setupOTPInputs() {
+            const inputs = document.querySelectorAll('.otp-input');
+            inputs.forEach(input => input.value = '');
+            inputs.forEach((input, index) => {
+                input.replaceWith(input.cloneNode(true));
+            });
+            
+            const newInputs = document.querySelectorAll('.otp-input');
+            newInputs.forEach((input, index) => {
+                input.addEventListener('input', function(e) {
+                    const value = this.value;
+                    if (!/^\d*$/.test(value)) {
+                        this.value = '';
+                        return;
+                    }
+                    if (value.length === 1 && index < newInputs.length - 1) {
+                        newInputs[index + 1].focus();
+                    }
+                });
+                
+                input.addEventListener('keydown', function(e) {
+                    if (e.key === 'Backspace' && !this.value && index > 0) {
+                        newInputs[index - 1].focus();
+                    }
+                });
+                
+                input.addEventListener('paste', function(e) {
+                    e.preventDefault();
+                    const pastedData = e.clipboardData.getData('text');
+                    const digits = pastedData.replace(/\D/g, '').split('');
+                    digits.forEach((digit, i) => {
+                        if (index + i < newInputs.length) {
+                            newInputs[index + i].value = digit;
+                        }
+                    });
+                });
+            });
+        }
+        
+        function startOTPTimer() {
+            if (otpTimerInterval) clearInterval(otpTimerInterval);
+            
+            const timerDisplay = document.getElementById('otpTimer');
+            otpTimerInterval = setInterval(() => {
+                const expiry = parseInt(sessionStorage.getItem('otpExpiry'));
+                const remaining = expiry - Date.now();
+                
+                if (remaining <= 0) {
+                    clearInterval(otpTimerInterval);
+                    timerDisplay.innerHTML = '<span style="color: #ef4444;">OTP expired. Please login again.</span>';
+                    sessionStorage.removeItem('loginOTP');
+                } else {
+                    const minutes = Math.floor(remaining / 60000);
+                    const seconds = Math.floor((remaining % 60000) / 1000);
+                    timerDisplay.innerHTML = `OTP expires in: <strong>${minutes}:${seconds.toString().padStart(2, '0')}</strong>`;
+                }
+            }, 1000);
+        }
+    </script>
+</body>
+</html>

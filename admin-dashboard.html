@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Toast Notification Container -->
+    <div id="toastContainer" style="position: fixed; top: 20px; right: 20px; z-index: 10000;"></div>
+
+    <nav class="navbar">
+        <div class="nav-container">
+            <h2>Admin Portal</h2>
+            <div class="nav-right">
+                <span id="adminName">Admin Panel</span>
+                <button class="btn-logout" id="logoutBtn">Logout</button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="dashboard-container">
+        <aside class="sidebar">
+            <ul class="menu">
+                <li><a href="#" class="menu-item active" data-section="members">Manage Members</a></li>
+                <li><a href="#" class="menu-item" data-section="points-mgmt">Points Management</a></li>
+                <li><a href="#" class="menu-item" data-section="membership-mgmt">Membership Control</a></li>
+                <li><a href="#" class="menu-item" data-section="requests">Service Requests</a></li>
+            </ul>
+        </aside>
+
+        <main class="main-content">
+            <!-- Members Management Section -->
+            <section id="members" class="content-section active">
+                <h2>All Members</h2>
+                <div class="search-bar">
+                    <input type="text" id="searchMembers" placeholder="Search by name, email, or user ID">
+                </div>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>User ID</th>
+                                <th>Name</th>
+                                <th>Email</th>
+                                <th>Membership</th>
+                                <th>Points</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="membersTableBody">
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Points Management Section -->
+            <section id="points-mgmt" class="content-section">
+                <h2>Update Member Points</h2>
+                <div class="admin-form-card">
+                    <form id="updatePointsForm">
+                        <div class="form-group">
+                            <label for="memberSelect">Select Member</label>
+                            <select id="memberSelect" required>
+                                <option value="">Choose a member</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="pointsAction">Action</label>
+                            <select id="pointsAction" required>
+                                <option value="add">Add Points</option>
+                                <option value="subtract">Subtract Points</option>
+                                <option value="set">Set Points</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="pointsAmount">Points Amount</label>
+                            <input type="number" id="pointsAmount" required min="0">
+                        </div>
+                        <div class="form-group">
+                            <label for="pointsReason">Reason</label>
+                            <input type="text" id="pointsReason" required placeholder="e.g., Service completion">
+                        </div>
+                        <button type="submit" class="btn-primary">Update Points</button>
+                    </form>
+                </div>
+
+                <h3 style="margin-top: 40px;">Recent Points Updates</h3>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Member</th>
+                                <th>Action</th>
+                                <th>Points</th>
+                                <th>Reason</th>
+                            </tr>
+                        </thead>
+                        <tbody id="pointsHistoryBody">
+                            <tr>
+                                <td colspan="5" class="no-data">No points updates yet</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Membership Control Section -->
+            <section id="membership-mgmt" class="content-section">
+                <h2>Membership Control</h2>
+                <div class="admin-form-card">
+                    <form id="membershipControlForm">
+                        <div class="form-group">
+                            <label for="memberSelectMembership">Select Member</label>
+                            <select id="memberSelectMembership" required>
+                                <option value="">Choose a member</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="membershipAction">Action</label>
+                            <select id="membershipAction" required>
+                                <option value="grant">Grant Membership</option>
+                                <option value="revoke">Revoke Membership</option>
+                            </select>
+                        </div>
+                        <div class="form-group" id="membershipTypeGroup">
+                            <label for="membershipType">Membership Type</label>
+                            <select id="membershipType">
+                                <option value="basic">Basic</option>
+                                <option value="silver">Silver</option>
+                                <option value="gold">Gold</option>
+                                <option value="platinum">Platinum</option>
+                            </select>
+                        </div>
+                        <div class="form-group" id="expiryDateGroup">
+                            <label for="expiryDate">Expiry Date</label>
+                            <input type="date" id="expiryDate">
+                        </div>
+                        <button type="submit" class="btn-primary">Update Membership</button>
+                    </form>
+                </div>
+            </section>
+
+            <!-- Service Requests Section -->
+            <section id="requests" class="content-section">
+                <h2>Service Requests</h2>
+                <div class="filter-bar">
+                    <select id="statusFilter">
+                        <option value="all">All Status</option>
+                        <option value="pending">Pending</option>
+                        <option value="in-progress">In Progress</option>
+                        <option value="completed">Completed</option>
+                    </select>
+                </div>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>User ID</th>
+                                <th>Title</th>
+                                <th>Category</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="requestsTableBody">
+                            <tr>
+                                <td colspan="6" class="no-data">No service requests available</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Request Details Modal -->
+    <div id="requestModal" class="modal">
+        <div class="modal-content large">
+            <span class="close-modal">&times;</span>
+            <h2>Service Request Details</h2>
+            <div id="requestDetailsContent"></div>
+            <div class="modal-actions">
+                <select id="statusUpdate">
+                    <option value="pending">Pending</option>
+                    <option value="in-progress">In Progress</option>
+                    <option value="completed">Completed</option>
+                </select>
+                <button class="btn-primary" id="updateStatusBtn">Update Status</button>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        .toast {
+            background: white;
+            padding: 16px 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            min-width: 300px;
+            animation: slideIn 0.3s ease;
+            border-left: 4px solid #2563eb;
+        }
+        .toast.success { border-left-color: #10b981; }
+        .toast.error { border-left-color: #ef4444; }
+        .toast-icon { font-size: 20px; flex-shrink: 0; }
+        .toast.success .toast-icon { color: #10b981; }
+        .toast.error .toast-icon { color: #ef4444; }
+        .toast-message { flex: 1; color: #374151; font-size: 14px; font-weight: 500; }
+        @keyframes slideIn {
+            from { transform: translateX(400px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        @keyframes slideOut {
+            from { transform: translateX(0); opacity: 1; }
+            to { transform: translateX(400px); opacity: 0; }
+        }
+        .toast.hiding { animation: slideOut 0.3s ease forwards; }
+        .modal-actions {
+            margin-top: 20px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        .modal-actions select {
+            flex: 1;
+            padding: 10px;
+            border: 2px solid #e5e7eb;
+            border-radius: 6px;
+        }
+    </style>
+
+    <script>
+        let currentUser = null;
+        
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            const icon = type === 'success' ? '✓' : '✕';
+            toast.innerHTML = `<span class="toast-icon">${icon}</span><span class="toast-message">${message}</span>`;
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.classList.add('hiding');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Admin dashboard loading...');
+            initializeAdminDashboard();
+        });
+        
+        function initializeAdminDashboard() {
+            const userId = sessionStorage.getItem('currentUser');
+            console.log('Admin user ID:', userId);
+            
+            if (!userId) {
+                console.log('No admin logged in');
+                window.location.href = 'index.html';
+                return;
+            }
+            
+            const users = JSON.parse(localStorage.getItem('users')) || [];
+            currentUser = users.find(u => u.userId === userId);
+            
+            console.log('Admin user:', currentUser);
+            
+            if (!currentUser || currentUser.userType !== 'admin') {
+                console.log('Not an admin user');
+                window.location.href = 'index.html';
+                return;
+            }
+            
+            document.getElementById('adminName').textContent = currentUser.name;
+            setupAdminDashboard();
+        }
+        
+        function setupAdminDashboard() {
+            console.log('Setting up admin dashboard...');
+            
+            const menuItems = document.querySelectorAll('.menu-item');
+            menuItems.forEach(item => {
+                item.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const section = this.dataset.section;
+                    
+                    console.log('Admin navigating to:', section);
+                    
+                    menuItems.forEach(i => i.classList.remove('active'));
+                    this.classList.add('active');
+                    
+                    document.querySelectorAll('.content-section').forEach(s => s.classList.remove('active'));
+                    
+                    const targetSection = document.getElementById(section);
+                    if (targetSection) {
+                        targetSection.classList.add('active');
+                        
+                        if (section === 'members') {
+                            loadMembers();
+                        } else if (section === 'points-mgmt') {
+                            loadMemberSelects();
+                            loadPointsHistory();
+                        } else if (section === 'membership-mgmt') {
+                            loadMemberSelects();
+                        } else if (section === 'requests') {
+                            loadServiceRequestsAdmin();
+                        }
+                    }
+                });
+            });
+            
+            const logoutBtn = document.getElementById('logoutBtn');
+            if (logoutBtn) {
+                logoutBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    console.log('Admin logging out...');
+                    sessionStorage.removeItem('currentUser');
+                    showToast('Logged out successfully!', 'success');
+                    setTimeout(() => {
+                        window.location.href = 'index.html';
+                    }, 1000);
+                });
+            }
+            
+            setupAdminForms();
+            loadMembers();
+            
+            console.log('Admin dashboard setup complete');
+        }
+        
+        function setupAdminForms() {
+            const updatePointsForm = document.getElementById('updatePointsForm');
+            if (updatePointsForm) {
+                updatePointsForm.addEventListener('submit', handleUpdatePoints);
+            }
+            
+            const membershipControlForm = document.getElementById('membershipControlForm');
+            if (membershipControlForm) {
+                membershipControlForm.addEventListener('submit', handleMembershipControl);
+            }
+            
+            const membershipAction = document.getElementById('membershipAction');
+            if (membershipAction) {
+                membershipAction.addEventListener('change', function() {
+                    const typeGroup = document.getElementById('membershipTypeGroup');
+                    const expiryGroup = document.getElementById('expiryDateGroup');
+                    
+                    if (this.value === 'grant') {
+                        typeGroup.style.display = 'block';
+                        expiryGroup.style.display = 'block';
+                    } else {
+                        typeGroup.style.display = 'none';
+                        expiryGroup.style.display = 'none';
+                    }
+                });
+            }
+            
+            const searchMembers = document.getElementById('searchMembers');
+            if (searchMembers) {
+                searchMembers.addEventListener('input', function(e) {
+                    const searchTerm = e.target.value.toLowerCase();
+                    const rows = document.querySelectorAll('#membersTableBody tr');
+                    
+                    rows.forEach(row => {
+                        const text = row.textContent.toLowerCase();
+                        row.style.display = text.includes(searchTerm) ? '' : 'none';
+                    });
+                });
+            }
+            
+            const statusFilter = document.getElementById('statusFilter');
+            if (statusFilter) {
+                statusFilter.addEventListener('change', function() {
+                    loadServiceRequestsAdmin();
+                    
+                    if (this.value !== 'all') {
+                        const rows = document.querySelectorAll('#requestsTableBody tr');
+                        rows.forEach(row => {
+                            const statusCell = row.querySelector('.status-badge');
+                            if (statusCell && !statusCell.textContent.includes(this.value)) {
+                                row.style.display = 'none';
+                            }
+                        });
+                    }
+                });
+            }
+            
+            const closeModal = document.querySelector('.close-modal');
+            if (closeModal) {
+                closeModal.addEventListener('click', function() {
+                    document.getElementById('requestModal').classList.remove('show');
+                });
+            }
+        }
+        
+        function getUsers() {
+            return JSON.parse(localStorage.getItem('users')) || [];
+        }
+        
+        function updateUserById(userId, updates) {
+            const users = getUsers();
+            const index = users.findIndex(u => u.userId === userId);
+            if (index !== -1) {
+                users[index] = { ...users[index], ...updates };
+                localStorage.setItem('users', JSON.stringify(users));
+                return true;
+            }
+            return false;
+        }
+        
+        function formatDate(date) {
+            return new Date(date).toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric'
+            });
+        }
+        
+        function loadMembers() {
+            const users = getUsers().filter(u => u.userType !== 'admin');
+            const tbody = document.getElementById('membersTableBody');
+            
+            if (users.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="no-data">No members found</td></tr>';
+                return;
+            }
+            
+            tbody.innerHTML = users.map(user => `
+                <tr>
+                    <td>${user.userId}</td>
+                    <td>${user.name}</td>
+                    <td>${user.email}</td>
+                    <td><span class="status-badge status-${user.membership ? 'active' : 'inactive'}">${user.membership ? user.membership.type : 'None'}</span></td>
+                    <td>${user.points || 0}</td>
+                    <td>
+                        <button class="action-btn btn-view" onclick="viewMemberDetails('${user.userId}')">View</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+        
+        function loadMemberSelects() {
+            const users = getUsers().filter(u => u.userType !== 'admin');
+            const select1 = document.getElementById('memberSelect');
+            const select2 = document.getElementById('memberSelectMembership');
+            
+            const options = users.map(u => `<option value="${u.userId}">${u.name} (${u.userId})</option>`).join('');
+            
+            if (select1) select1.innerHTML = '<option value="">Choose a member</option>' + options;
+            if (select2) select2.innerHTML = '<option value="">Choose a member</option>' + options;
+        }
+        
+        function handleUpdatePoints(e) {
+            e.preventDefault();
+            
+            const userId = document.getElementById('memberSelect').value;
+            const action = document.getElementById('pointsAction').value;
+            const amount = parseInt(document.getElementById('pointsAmount').value);
+            const reason = document.getElementById('pointsReason').value;
+            
+            const users = getUsers();
+            const user = users.find(u => u.userId === userId);
+            
+            if (!user) {
+                showToast('User not found', 'error');
+                return;
+            }
+            
+            let newPoints = user.points || 0;
+            
+            if (action === 'add') {
+                newPoints += amount;
+            } else if (action === 'subtract') {
+                newPoints = Math.max(0, newPoints - amount);
+            } else if (action === 'set') {
+                newPoints = amount;
+            }
+            
+            updateUserById(userId, { points: newPoints });
+            
+            if (!user.serviceHistory) user.serviceHistory = [];
+            user.serviceHistory.push({
+                date: new Date().toISOString(),
+                serviceName: reason,
+                pointsEarned: action === 'add' ? amount : -amount,
+                status: 'completed'
+            });
+            updateUserById(userId, { serviceHistory: user.serviceHistory });
+            
+            const pointsHistory = JSON.parse(localStorage.getItem('pointsHistory')) || [];
+            pointsHistory.push({
+                date: new Date().toISOString(),
+                userId: userId,
+                userName: user.name,
+                action: action,
+                amount: amount,
+                reason: reason
+            });
+            localStorage.setItem('pointsHistory', JSON.stringify(pointsHistory));
+            
+            showToast('Points updated successfully!', 'success');
+            e.target.reset();
+            loadPointsHistory();
+            loadMembers();
+        }
+        
+        function handleMembershipControl(e) {
+            e.preventDefault();
+            
+            const userId = document.getElementById('memberSelectMembership').value;
+            const action = document.getElementById('membershipAction').value;
+            
+            const users = getUsers();
+            const user = users.find(u => u.userId === userId);
+            
+            if (!user) {
+                showToast('User not found', 'error');
+                return;
+            }
+            
+            if (action === 'grant') {
+                const type = document.getElementById('membershipType').value;
+                const expiryDate = document.getElementById('expiryDate').value;
+                
+                updateUserById(userId, {
+                    membership: {
+                        type: type,
+                        startDate: new Date().toISOString(),
+                        expiryDate: expiryDate
+                    }
+                });
+                
+                showToast(`${type.toUpperCase()} membership granted to ${user.name}`, 'success');
+            } else if (action === 'revoke') {
+                updateUserById(userId, {
+                    membership: null,
+                    points: 0
+                });
+                
+                showToast(`Membership revoked for ${user.name}`, 'success');
+            }
+            
+            e.target.reset();
+            loadMembers();
+        }
+        
+        function loadPointsHistory() {
+            const history = JSON.parse(localStorage.getItem('pointsHistory')) || [];
+            const tbody = document.getElementById('pointsHistoryBody');
+            
+            if (history.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="no-data">No points updates yet</td></tr>';
+            } else {
+                tbody.innerHTML = history.slice(-10).reverse().map(h => `
+                    <tr>
+                        <td>${formatDate(h.date)}</td>
+                        <td>${h.userName}</td>
+                        <td>${h.action}</td>
+                        <td>${h.amount}</td>
+                        <td>${h.reason}</td>
+                    </tr>
+                `).join('');
+            }
+        }
+        
+        function loadServiceRequestsAdmin() {
+            const requests = JSON.parse(localStorage.getItem('serviceRequests')) || [];
+            const tbody = document.getElementById('requestsTableBody');
+            
+            if (requests.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="no-data">No service requests available</td></tr>';
+            } else {
+                tbody.innerHTML = requests.map(request => `
+                    <tr>
+                        <td>${formatDate(request.createdAt)}</td>
+                        <td>${request.userId}</td>
+                        <td>${request.title}</td>
+                        <td>${request.category}</td>
+                        <td><span class="status-badge status-${request.status}">${request.status}</span></td>
+                        <td>
+                            <button class="action-btn btn-view" onclick="viewRequest(${request.id})">View</button>
+                        </td>
+                    </tr>
+                `).join('');
+            }
+        }
+        
+        window.viewMemberDetails = function(userId) {
+            const users = getUsers();
+            const user = users.find(u => u.userId === userId);
+            if (user) {
+                const details = `
+Member Details:
+━━━━━━━━━━━━━━━━━━━━
+Name: ${user.name}
+Email: ${user.email}
+Phone: ${user.phone}
+User ID: ${user.userId}
+Points: ${user.points || 0}
+Membership: ${user.membership ? user.membership.type.toUpperCase() : 'None'}
+Registered: ${formatDate(user.registeredDate)}
+                `;
+                alert(details);
+            }
+        };
+        
+        window.viewRequest = function(requestId) {
+            const requests = JSON.parse(localStorage.getItem('serviceRequests')) || [];
+            const request = requests.find(r => r.id === requestId);
+            
+            if (!request) return;
+            
+            const modal = document.getElementById('requestModal');
+            const content = document.getElementById('requestDetailsContent');
+            
+            content.innerHTML = `
+                <div class="info-card">
+                    <div class="info-item">
+                        <span class="label">Request ID:</span>
+                        <span class="value">${request.id}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="label">User ID:</span>
+                        <span class="value">${request.userId}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="label">User Name:</span>
+                        <span class="value">${request.userName}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="label">Email:</span>
+                        <span class="value">${request.userEmail}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="label">Title:</span>
+                        <span class="value">${request.title}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="label">Category:</span>
+                        <span class="value">${request.category}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="label">Status:</span>
+                        <span class="value">${request.status}</span>
+                    </div>
+                    <div class="info-item" style="flex-direction: column; align-items: flex-start;">
+                        <span class="label">Details:</span>
+                        <span class="value" style="margin-top: 10px;">${request.details}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="label">Created:</span>
+                        <span class="value">${formatDate(request.createdAt)}</span>
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('statusUpdate').value = request.status;
+            modal.classList.add('show');
+            
+            document.getElementById('updateStatusBtn').onclick = function() {
+                const newStatus = document.getElementById('statusUpdate').value;
+                request.status = newStatus;
+                localStorage.setItem('serviceRequests', JSON.stringify(requests));
+                showToast('Status updated successfully!', 'success');
+                modal.classList.remove('show');
+                loadServiceRequestsAdmin();
+            };
+        };
+    </script>
+</body>
+</html>
